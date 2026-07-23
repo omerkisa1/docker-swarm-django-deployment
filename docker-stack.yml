@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
+      - POSTGRES_DB=django_db
+      - POSTGRES_USER=django_user
+    secrets:
+      - db_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U django_user -d django_db"]
+      interval: 5s
+      retries: 3
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == swarm-manager
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  web:
+    image: omerkisa1/django-web:v1
+    command: sh -c "gunicorn --bind 0.0.0.0:8080 swarmproject.wsgi:application"
+    environment:
+     - POSTGRES_DB=django_db
+     - POSTGRES_USER=django_user
+    secrets:
+      - django_secret_key
+    deploy:
+      replicas: 3
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  postgres_data:
+
+secrets:
+  db_password:
+    external: true
+  django_secret_key:
+    external: true
