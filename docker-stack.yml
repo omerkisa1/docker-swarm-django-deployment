@@ -26,8 +26,18 @@ services:
      - POSTGRES_USER=django_user
     secrets:
       - django_secret_key
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 5s
+      retries: 3
     deploy:
       replicas: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+
   nginx:
     image: nginx:alpine
     ports:
